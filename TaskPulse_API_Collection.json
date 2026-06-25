@@ -1,0 +1,201 @@
+{
+  "info": {
+    "name": "TaskPulse API Tests (Analytics, Billing, Invites)",
+    "description": "A collection of requests to test the newly implemented Analytics, Billing, and Invites endpoints.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Analytics",
+      "item": [
+        {
+          "name": "Get Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/analytics?workspaceId={{workspace_id}}&range=7d",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "analytics"],
+              "query": [
+                {
+                  "key": "workspaceId",
+                  "value": "{{workspace_id}}"
+                },
+                {
+                  "key": "range",
+                  "value": "7d"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Latest Digest",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/analytics/digest?workspaceId={{workspace_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "analytics", "digest"],
+              "query": [
+                {
+                  "key": "workspaceId",
+                  "value": "{{workspace_id}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Billing",
+      "item": [
+        {
+          "name": "Create Razorpay Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"amount\": 100000\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/billing/orders",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "billing", "orders"]
+            }
+          }
+        },
+        {
+          "name": "Razorpay Webhook (Mock)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-razorpay-signature",
+                "value": "invalid_sig_for_testing",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"event\": \"payment.captured\",\n    \"payload\": {\n        \"payment\": {\n            \"entity\": {\n                \"id\": \"pay_test123\"\n            }\n        }\n    }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/billing/webhook/razorpay",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "billing", "webhook", "razorpay"]
+            }
+          }
+        },
+        {
+          "name": "Update User Plan",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"plan\": \"pro\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/billing/user/plan",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "billing", "user", "plan"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Invites",
+      "item": [
+        {
+          "name": "Validate Invite",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/invites/dummy_token123",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "invites", "dummy_token123"]
+            }
+          }
+        },
+        {
+          "name": "Claim Invite",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/invites/dummy_token123/claim",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "invites", "dummy_token123", "claim"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "access_token",
+      "value": "YOUR_JWT_ACCESS_TOKEN_HERE"
+    },
+    {
+      "key": "workspace_id",
+      "value": "YOUR_WORKSPACE_ID_HERE"
+    }
+  ]
+}
