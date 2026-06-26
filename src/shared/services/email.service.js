@@ -1,6 +1,8 @@
 const { Resend } = require('resend');
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = process.env.RESEND_API_KEY
+  ? new Resend(process.env.RESEND_API_KEY)
+  : null;
 
 /**
  * Send a workspace invite email using Resend.
@@ -11,6 +13,11 @@ const resend = new Resend(process.env.RESEND_API_KEY);
  */
 const sendWorkspaceInviteEmail = async (email, inviteUrl, workspaceName, inviterName = 'Someone') => {
   try {
+    if (!resend) {
+      console.warn('Email service not configured (missing RESEND_API_KEY). Skipping invite email.');
+      return null;
+    }
+
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaec; border-radius: 8px;">
         <h2 style="color: #1a1a1a; margin-top: 0;">You've been invited to TaskPulse!</h2>
