@@ -5,7 +5,8 @@ const {
   listProjects,
   getProject,
   updateProject,
-  archiveProject
+  archiveProject,
+  getPresignedUrl
 } = require('./projects.controller');
 
 const router = express.Router();
@@ -17,5 +18,6 @@ router.get('/', listProjects);
 router.get('/:id', getProject);
 router.patch('/:id', updateProject);
 router.delete('/:id', archiveProject);
+router.post('/:id/attachments', getPresignedUrl);
 
 module.exports = router;

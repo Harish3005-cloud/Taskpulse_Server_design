@@ -2,6 +2,17 @@ const Project = require('./projects.model');
 const Workspace = require('../workspaces/workspaces.model');
 const Task = require('../tasks/tasks.model');
 const AppError = require('../../shared/utils/AppError');
+const crypto = require('crypto');
+const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
+
+const s3Client = new S3Client({
+  region: process.env.AWS_REGION || 'eu-north-1',
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID || 'dummy',
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || 'dummy'
+  }
+});
 
 const verifyWorkspaceMembership = async (workspaceId, userId) => {
   const workspace = await Workspace.findOne({
@@ -153,10 +164,50 @@ const archiveProject = async (projectId, workspaceId, userId) => {
   return true;
 };
 
+const getPresignedUrl = async (projectId, workspaceId, userId, fileDetails) => {
+  await verifyWorkspaceMembership(workspaceId, userId);
+
+  const project = await Project.findOne({ _id: projectId, workspaceId, archivedAt: null });
+  if (!project) {
+    throw new AppError('Project not found', 404);
+  }
+
+  const bucketName = process.env.AWS_S3_BUCKET_NAME;
+  if (!bucketName) {
+    throw new AppError('S3 Bucket name is not configured', 500);
+  }
+
+  const fileExtension = fileDetails.fileName.split('.').pop();
+  const randomString = crypto.randomBytes(8).toString('hex');
+  const objectKey = `workspaces/${workspaceId}/projects/${projectId}/attachments/${randomString}.${fileExtension}`;
+
+  const command = new PutObjectCommand({
+    Bucket: bucketName,
+    Key: objectKey,
+    ContentType: fileDetails.mimeType,
+  });
+
+  const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 900 });
+  const fileUrl = `https://${bucketName}.s3.${process.env.AWS_REGION || 'eu-north-1'}.amazonaws.com/${objectKey}`;
+
+  project.attachments.push({
+    fileName: fileDetails.fileName,
+    fileUrl: fileUrl,
+    fileSize: fileDetails.fileSize,
+    mimeType: fileDetails.mimeType,
+    uploadedAt: new Date()
+  });
+
+  await project.save();
+
+  return { presignedUrl, fileUrl, attachment: project.attachments[project.attachments.length - 1] };
+};
+
 module.exports = {
   createProject,
   listProjects,
   getProject,
   updateProject,
-  archiveProject
+  archiveProject,
+  getPresignedUrl
 };

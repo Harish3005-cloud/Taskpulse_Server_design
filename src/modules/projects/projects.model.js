@@ -48,7 +48,14 @@ const projectSchema = new mongoose.Schema({
   archivedAt: { 
     type: Date,
     default: null
-  }
+  },
+  attachments: [{
+    fileName: { type: String, required: true },
+    fileUrl: { type: String, required: true },
+    fileSize: { type: Number },
+    mimeType: { type: String },
+    uploadedAt: { type: Date, default: Date.now }
+  }]
 }, { 
   timestamps: true 
 });

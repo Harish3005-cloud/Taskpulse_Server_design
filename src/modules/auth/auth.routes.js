@@ -1,5 +1,5 @@
 const express = require('express');
-const { googleCallback, devLogin, refreshToken, logout, getMe } = require('./auth.controller');
+const { googleCallback, register, login, refreshToken, logout, getMe } = require('./auth.controller');
 const { authenticate } = require('../../shared/middleware/auth.middleware');
 
 const router = express.Router();
@@ -36,12 +36,21 @@ router.get(
 
 /**
  * @swagger
- * /auth/google/callback:
+ * /auth/register:
  *   post:
- *     summary: Dev mode email login
+ *     summary: Register a new user
  *     tags: [Auth]
  */
-router.post('/google/callback', devLogin);
+router.post('/register', register);
+
+/**
+ * @swagger
+ * /auth/login:
+ *   post:
+ *     summary: Login with email and password
+ *     tags: [Auth]
+ */
+router.post('/login', login);
 
 /**
  * @swagger

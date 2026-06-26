@@ -45,27 +45,77 @@ const googleCallback = async (req, res, next) => {
 };
 
 /**
- * POST /api/v1/auth/google/callback
- * Dev mode login — accepts { email, name } in body.
+ * POST /api/v1/auth/register
+ * Register a new user with email and password
  */
-const devLogin = async (req, res, next) => {
+const register = async (req, res, next) => {
   try {
-    const { email, name } = req.body;
-    if (!email || !name) {
-      throw new AppError('Email and name are required', 400);
+    const { email, password, name } = req.body;
+    if (!email || !password || !name) {
+      throw new AppError('Email, password, and name are required', 400);
     }
     
     let user = await User.findOne({ email });
+    if (user) {
+      throw new AppError('User already exists with this email', 400);
+    }
+    
+    user = await User.create({ email, password, name });
+    
+    const workspace = await Workspace.create({
+      name: `${name}'s Workspace`,
+      createdBy: user._id,
+      members: [{ userId: user._id, role: 'owner' }]
+    });
+    user.tenantId = workspace._id;
+    await user.save();
+    
+    const { accessToken, refreshToken } = await authService.generateTokens(user._id, user.email);
+    
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: '/'
+    });
+    
+    res.status(201).json({
+      success: true,
+      accessToken,
+      user: {
+        id: user._id,
+        email: user.email,
+        name: user.name,
+        avatar: user.avatar,
+        plan: user.plan
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/v1/auth/login
+ * Login user with email and password
+ */
+const login = async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      throw new AppError('Email and password are required', 400);
+    }
+    
+    // Explicitly select password field for verification
+    const user = await User.findOne({ email }).select('+password');
     if (!user) {
-      user = await User.create({ email, name });
-      
-      const workspace = await Workspace.create({
-        name: `${name}'s Workspace`,
-        createdBy: user._id,
-        members: [{ userId: user._id, role: 'owner' }]
-      });
-      user.tenantId = workspace._id;
-      await user.save();
+      throw new AppError('Invalid email or password', 401);
+    }
+    
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      throw new AppError('Invalid email or password', 401);
     }
     
     const { accessToken, refreshToken } = await authService.generateTokens(user._id, user.email);
@@ -194,7 +244,8 @@ const getMe = async (req, res, next) => {
 
 module.exports = {
   googleCallback,
-  devLogin,
+  register,
+  login,
   refreshToken,
   logout,
   getMe

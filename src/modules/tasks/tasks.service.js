@@ -63,7 +63,12 @@ const listTasks = async (workspaceId, userId, query = {}) => {
 
   if (query.projectId) filter.projectId = query.projectId;
   if (query.status) filter.status = query.status;
-  if (query.priority) filter.priority = Number(query.priority);
+  if (query.priority) {
+    if (query.priority === 'high') filter['ai.priority'] = { $gte: 7 };
+    else if (query.priority === 'medium') filter['ai.priority'] = { $gte: 4, $lte: 6 };
+    else if (query.priority === 'low') filter['ai.priority'] = { $lte: 3 };
+    else filter.priority = Number(query.priority);
+  }
   if (query.assignedTo) filter.assignedTo = query.assignedTo;
   if (query.createdBy) filter.createdBy = query.createdBy;
   if (query.category) filter['ai.category'] = query.category;

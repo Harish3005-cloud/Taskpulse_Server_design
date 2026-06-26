@@ -39,10 +39,35 @@ const userSchema = new mongoose.Schema({
   onboardingCompleted: { 
     type: Boolean, 
     default: false 
+  },
+  password: {
+    type: String,
+    select: false // Do not include in queries by default
   }
 }, { 
   timestamps: true 
 });
+
+// Hash password before saving
+userSchema.pre('save', async function(next) {
+  if (!this.isModified('password') || !this.password) return next();
+  
+  try {
+    const bcrypt = require('bcryptjs');
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Method to compare passwords
+userSchema.methods.comparePassword = async function(candidatePassword) {
+  if (!this.password) return false;
+  const bcrypt = require('bcryptjs');
+  return bcrypt.compare(candidatePassword, this.password);
+};
 
 // Indexes
 userSchema.index({ email: 1 });

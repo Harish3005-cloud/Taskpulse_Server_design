@@ -62,10 +62,30 @@ const archiveProject = async (req, res, next) => {
   }
 };
 
+const getPresignedUrl = async (req, res, next) => {
+  try {
+    const { workspaceId, fileName, fileSize, mimeType } = req.body;
+    if (!workspaceId || !fileName || !fileSize || !mimeType) {
+      throw new AppError('workspaceId, fileName, fileSize, and mimeType are required', 400);
+    }
+
+    const result = await projectService.getPresignedUrl(req.params.id, workspaceId, req.user.id, {
+      fileName,
+      fileSize,
+      mimeType
+    });
+
+    res.status(201).json({ success: true, ...result });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createProject,
   listProjects,
   getProject,
   updateProject,
-  archiveProject
+  archiveProject,
+  getPresignedUrl
 };
