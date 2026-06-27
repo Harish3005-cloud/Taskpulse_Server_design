@@ -110,7 +110,7 @@ jobs:
         run: npx eslint src --format json --output-file eslint-security-report.json || true
 
       - name: Upload ESLint report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: eslint-security-report
