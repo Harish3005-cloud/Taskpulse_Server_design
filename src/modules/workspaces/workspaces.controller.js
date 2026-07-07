@@ -1,6 +1,5 @@
 const workspaceService = require('./workspaces.service');
 const AppError = require('../../shared/utils/AppError');
-const { sendWorkspaceInviteEmail } = require('../../shared/services/email.service');
 
 /**
  * GET /api/v1/workspaces
@@ -91,73 +90,9 @@ const updateWorkspace = async (req, res, next) => {
   }
 };
 
-/**
- * POST /api/v1/workspaces/:id/invites
- * Create an invite token/link (owner/admin only).
- */
-const createInvite = async (req, res, next) => {
-  try {
-    const { expiresInDays, emails } = req.body;
-    
-    // Get the workspace name for the email
-    const workspace = await workspaceService.getWorkspaceById(req.params.id, req.user.id);
-
-    // If emails array is provided, create a token for each and send emails
-    if (emails && Array.isArray(emails) && emails.length > 0) {
-      const invites = [];
-      
-      for (const email of emails) {
-        const invite = await workspaceService.createInvite(
-          req.params.id,
-          req.user.id,
-          expiresInDays
-        );
-        
-        const inviteUrl = `${process.env.CORS_ORIGIN || 'http://localhost:5173'}/invite/${invite.token}`;
-        
-        // Send email in background
-        sendWorkspaceInviteEmail(email, inviteUrl, workspace.name, req.user.name || 'Your Team');
-        
-        invites.push({
-          email,
-          token: invite.token,
-          url: inviteUrl
-        });
-      }
-
-      return res.status(201).json({
-        success: true,
-        message: `Invites sent to ${emails.length} users`,
-        invites
-      });
-    }
-
-    // Default behavior: create a single shareable link
-    const invite = await workspaceService.createInvite(
-      req.params.id,
-      req.user.id,
-      expiresInDays
-    );
-
-    const inviteUrl = `${process.env.CORS_ORIGIN || 'http://localhost:5173'}/invite/${invite.token}`;
-
-    res.status(201).json({
-      success: true,
-      invite: {
-        token: invite.token,
-        url: inviteUrl,
-        expiresAt: invite.expiresAt
-      }
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
 module.exports = {
   listWorkspaces,
   getWorkspace,
   getWorkspaceMembers,
-  updateWorkspace,
-  createInvite
+  updateWorkspace
 };

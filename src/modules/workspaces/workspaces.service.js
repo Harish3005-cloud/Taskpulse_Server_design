@@ -80,49 +80,8 @@ const updateWorkspace = async (workspaceId, data, userId) => {
   return workspace;
 };
 
-const crypto = require('crypto');
-const Invite = require('./invites.model');
-
-/**
- * Create an invite link for a workspace
- */
-const createInvite = async (workspaceId, userId, expiresInDays = 7) => {
-  const workspace = await Workspace.findOne({
-    _id: workspaceId,
-    archivedAt: null
-  });
-
-  if (!workspace) {
-    throw new AppError('Workspace not found', 404);
-  }
-
-  // Check if user is owner or admin
-  const member = workspace.members.find(
-    m => m.userId.toString() === userId.toString()
-  );
-
-  if (!member || !['owner', 'admin'].includes(member.role)) {
-    throw new AppError('Only owners and admins can create invites', 403);
-  }
-
-  // Generate a secure token
-  const token = crypto.randomBytes(32).toString('hex');
-  const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + expiresInDays);
-
-  const invite = await Invite.create({
-    workspaceId,
-    token,
-    createdBy: userId,
-    expiresAt
-  });
-
-  return invite;
-};
-
 module.exports = {
   listWorkspaces,
   getWorkspaceById,
-  updateWorkspace,
-  createInvite
+  updateWorkspace
 };

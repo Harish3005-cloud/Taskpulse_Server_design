@@ -4,8 +4,7 @@ const {
   listWorkspaces, 
   getWorkspace, 
   getWorkspaceMembers,
-  updateWorkspace,
-  createInvite
+  updateWorkspace
 } = require('./workspaces.controller');
 
 const router = express.Router();
@@ -71,8 +70,6 @@ router.get('/:id', getWorkspace);
  */
 router.get('/:id/members', getWorkspaceMembers);
 
-
-
 /**
  * @swagger
  * /workspaces/{id}:
@@ -105,35 +102,5 @@ router.get('/:id/members', getWorkspaceMembers);
  *         description: Not authorized
  */
 router.patch('/:id', updateWorkspace);
-
-/**
- * @swagger
- * /workspaces/{id}/invites:
- *   post:
- *     summary: Create an invite link for a workspace
- *     tags: [Workspaces]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     requestBody:
- *       required: false
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               expiresInDays:
- *                 type: number
- *                 default: 7
- *     responses:
- *       201:
- *         description: Invite created
- */
-router.post('/:id/invites', createInvite);
 
 module.exports = router;
