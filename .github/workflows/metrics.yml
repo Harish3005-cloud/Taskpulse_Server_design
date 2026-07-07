@@ -295,7 +295,7 @@ jobs:
           npx cr src --format text >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "_Complexity analysis completed. See artifact for details._" >> $GITHUB_STEP_SUMMARY
 
       - name: Upload complexity report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: complexity-report
