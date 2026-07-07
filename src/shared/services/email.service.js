@@ -1,11 +1,58 @@
-const { Resend } = require('resend');
-
-const resend = process.env.RESEND_API_KEY
-  ? new Resend(process.env.RESEND_API_KEY)
-  : null;
+const https = require('https');
 
 /**
- * Send a project invite email using Resend.
+ * Send an email using the EmailJS REST API.
+ * Requires EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, and EMAILJS_PUBLIC_KEY in env.
+ */
+const sendEmailJS = (templateParams) => {
+  return new Promise((resolve, reject) => {
+    const serviceId = process.env.EMAILJS_SERVICE_ID;
+    const templateId = process.env.EMAILJS_TEMPLATE_ID;
+    const publicKey = process.env.EMAILJS_PUBLIC_KEY;
+
+    if (!serviceId || !templateId || !publicKey) {
+      console.warn('EmailJS not configured (missing EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, or EMAILJS_PUBLIC_KEY). Skipping email.');
+      return resolve(null);
+    }
+
+    const payload = JSON.stringify({
+      service_id: serviceId,
+      template_id: templateId,
+      user_id: publicKey,
+      template_params: templateParams
+    });
+
+    const options = {
+      hostname: 'api.emailjs.com',
+      port: 443,
+      path: '/api/v1.0/email/send',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(payload)
+      }
+    };
+
+    const req = https.request(options, (res) => {
+      let body = '';
+      res.on('data', (chunk) => { body += chunk; });
+      res.on('end', () => {
+        if (res.statusCode === 200) {
+          resolve({ success: true, response: body });
+        } else {
+          reject(new Error(`EmailJS responded with status ${res.statusCode}: ${body}`));
+        }
+      });
+    });
+
+    req.on('error', (err) => reject(err));
+    req.write(payload);
+    req.end();
+  });
+};
+
+/**
+ * Send a project invite email using EmailJS.
  * @param {string} email - The recipient email address.
  * @param {string} inviteUrl - The URL with the invite token.
  * @param {string} projectName - The name of the project.
@@ -13,53 +60,20 @@ const resend = process.env.RESEND_API_KEY
  */
 const sendProjectInviteEmail = async (email, inviteUrl, projectName, inviterName = 'Someone') => {
   try {
-    if (!resend) {
-      console.warn('Email service not configured (missing RESEND_API_KEY). Skipping invite email.');
-      return null;
-    }
-
-    const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaec; border-radius: 8px;">
-        <h2 style="color: #1a1a1a; margin-top: 0;">You're invited to collaborate on TaskPulse</h2>
-        <p style="color: #4a4a4a; font-size: 16px; line-height: 1.5;">
-          Hello,
-        </p>
-        <p style="color: #4a4a4a; font-size: 16px; line-height: 1.5;">
-          <strong>${inviterName}</strong> has invited you to collaborate on <strong>${projectName}</strong> inside TaskPulse.
-        </p>
-        <p style="color: #4a4a4a; font-size: 16px; line-height: 1.5;">
-          TaskPulse is an AI-powered collaborative project management platform. Click the button below to accept your invitation.
-        </p>
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${inviteUrl}" style="background-color: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
-            Accept Invitation
-          </a>
-        </div>
-        <p style="color: #4a4a4a; font-size: 16px; line-height: 1.5;">
-          If you already have a TaskPulse account, you can immediately access the project. If you don't, you will be guided through registration first.
-        </p>
-        <p style="color: #888; font-size: 14px; margin-top: 30px;">
-          If you weren't expecting this invitation, you can safely ignore this email.
-        </p>
-        <p style="color: #888; font-size: 14px; margin-top: 10px;">
-          Regards,<br/>
-          TaskPulse Team
-        </p>
-      </div>
-    `;
-
-    const data = await resend.emails.send({
-      from: 'TaskPulse <onboarding@resend.dev>', // Update with your verified Resend domain in production
-      to: email,
-      subject: `You're invited to collaborate on TaskPulse`,
-      html: html,
+    const result = await sendEmailJS({
+      to_email: email,
+      inviter_name: inviterName,
+      project_name: projectName,
+      invite_url: inviteUrl
     });
 
-    console.log(`Invite email sent successfully to ${email} (ID: ${data.id})`);
-    return data;
+    if (result) {
+      console.log(`Invite email sent successfully to ${email} via EmailJS`);
+    }
+    return result;
   } catch (error) {
-    console.error(`Failed to send invite email to ${email}:`, error);
-    // Don't throw the error, we still want to return the token even if email fails in dev
+    console.error(`Failed to send invite email to ${email}:`, error.message);
+    // Don't throw — we still want the invite token created even if email fails
     return null;
   }
 };
