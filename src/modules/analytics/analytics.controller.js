@@ -1,71 +1,109 @@
 const AppError = require('../../shared/utils/AppError');
-const Digest = require('./analytics.model');
+const analyticsService = require('./analytics.service');
 
-/**
- * GET /api/v1/analytics
- * Get dashboard stats
- */
-const getDashboardStats = async (req, res, next) => {
+const getSummary = async (req, res, next) => {
   try {
-    const { workspaceId, range } = req.query;
-    if (!workspaceId) {
-      throw new AppError('workspaceId query parameter is required', 400);
-    }
-    
-    // Mock analytics logic based on range (7d, 30d, 90d)
-    res.status(200).json({
-      success: true,
-      data: {
-        totalTasks: 120,
-        completedTasks: 85,
-        overdueTasks: 5,
-        completionRate: 70.8,
-        range: range || '7d'
-      }
-    });
+    const { workspaceId } = req.query;
+    if (!workspaceId) throw new AppError('workspaceId query parameter is required', 400);
+
+    const summary = await analyticsService.getWorkspaceSummary(workspaceId, req.user._id);
+    res.status(200).json(summary);
   } catch (error) {
     next(error);
   }
 };
 
-/**
- * GET /api/v1/analytics/digest
- * Get latest weekly digest
- */
-const getLatestDigest = async (req, res, next) => {
+const getProjects = async (req, res, next) => {
   try {
     const { workspaceId } = req.query;
-    if (!workspaceId) {
-      throw new AppError('workspaceId query parameter is required', 400);
-    }
+    if (!workspaceId) throw new AppError('workspaceId query parameter is required', 400);
 
-    // Try to find the most recent digest
-    let digest = await Digest.findOne({ workspaceId }).sort({ year: -1, week: -1 });
+    const projects = await analyticsService.getProjectProgress(workspaceId, req.user._id);
+    res.status(200).json(projects);
+  } catch (error) {
+    next(error);
+  }
+};
 
-    if (!digest) {
-      // Mock digest if none exists
-      digest = {
-        week: 25,
-        year: 2026,
-        content: "This week you completed 85 tasks. Great job on prioritizing high-urgency bugs! Next week, consider tackling the technical debt items that have been deferred.",
-        totalTasks: 100,
-        completedTasks: 85,
-        overdueTasks: 2,
-        avgPriority: 3.5,
-        generatedAt: new Date()
-      };
-    }
+const getStatus = async (req, res, next) => {
+  try {
+    const { workspaceId } = req.query;
+    if (!workspaceId) throw new AppError('workspaceId query parameter is required', 400);
 
-    res.status(200).json({
-      success: true,
-      digest
-    });
+    const statusDist = await analyticsService.getTaskStatusDistribution(workspaceId, req.user._id);
+    res.status(200).json(statusDist);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getPriorities = async (req, res, next) => {
+  try {
+    const { workspaceId } = req.query;
+    if (!workspaceId) throw new AppError('workspaceId query parameter is required', 400);
+
+    const priorities = await analyticsService.getPriorityDistribution(workspaceId, req.user._id);
+    res.status(200).json(priorities);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getTeam = async (req, res, next) => {
+  try {
+    const { workspaceId } = req.query;
+    if (!workspaceId) throw new AppError('workspaceId query parameter is required', 400);
+
+    const team = await analyticsService.getTeamPerformance(workspaceId, req.user._id);
+    res.status(200).json(team);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getDeadlines = async (req, res, next) => {
+  try {
+    const { workspaceId } = req.query;
+    if (!workspaceId) throw new AppError('workspaceId query parameter is required', 400);
+
+    const deadlines = await analyticsService.getUpcomingDeadlines(workspaceId, req.user._id);
+    res.status(200).json(deadlines);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getTrends = async (req, res, next) => {
+  try {
+    const { workspaceId, range } = req.query;
+    if (!workspaceId) throw new AppError('workspaceId query parameter is required', 400);
+
+    const trends = await analyticsService.getCompletionTrends(workspaceId, req.user._id, range);
+    res.status(200).json(trends);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getWorkspaceHealth = async (req, res, next) => {
+  try {
+    const { workspaceId } = req.query;
+    if (!workspaceId) throw new AppError('workspaceId query parameter is required', 400);
+
+    const health = await analyticsService.getWorkspaceHealth(workspaceId, req.user._id);
+    res.status(200).json(health);
   } catch (error) {
     next(error);
   }
 };
 
 module.exports = {
-  getDashboardStats,
-  getLatestDigest
+  getSummary,
+  getProjects,
+  getStatus,
+  getPriorities,
+  getTeam,
+  getDeadlines,
+  getTrends,
+  getWorkspaceHealth
 };

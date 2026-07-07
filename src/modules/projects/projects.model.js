@@ -25,8 +25,9 @@ const projectSchema = new mongoose.Schema({
     required: true
   },
   members: [{ 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'User' 
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    role: { type: String, default: 'member' },
+    joinedAt: { type: Date, default: Date.now }
   }],
   startDate: { 
     type: Date,

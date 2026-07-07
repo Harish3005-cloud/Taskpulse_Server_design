@@ -5,13 +5,13 @@ const resend = process.env.RESEND_API_KEY
   : null;
 
 /**
- * Send a workspace invite email using Resend.
+ * Send a project invite email using Resend.
  * @param {string} email - The recipient email address.
  * @param {string} inviteUrl - The URL with the invite token.
- * @param {string} workspaceName - The name of the workspace.
- * @param {string} inviterName - The name of the person inviting (optional).
+ * @param {string} projectName - The name of the project.
+ * @param {string} inviterName - The name of the person inviting.
  */
-const sendWorkspaceInviteEmail = async (email, inviteUrl, workspaceName, inviterName = 'Someone') => {
+const sendProjectInviteEmail = async (email, inviteUrl, projectName, inviterName = 'Someone') => {
   try {
     if (!resend) {
       console.warn('Email service not configured (missing RESEND_API_KEY). Skipping invite email.');
@@ -20,21 +20,30 @@ const sendWorkspaceInviteEmail = async (email, inviteUrl, workspaceName, inviter
 
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaec; border-radius: 8px;">
-        <h2 style="color: #1a1a1a; margin-top: 0;">You've been invited to TaskPulse!</h2>
+        <h2 style="color: #1a1a1a; margin-top: 0;">You're invited to collaborate on TaskPulse</h2>
         <p style="color: #4a4a4a; font-size: 16px; line-height: 1.5;">
-          <strong>${inviterName}</strong> has invited you to join their workspace <strong>${workspaceName}</strong> on TaskPulse.
+          Hello,
         </p>
         <p style="color: #4a4a4a; font-size: 16px; line-height: 1.5;">
-          TaskPulse is an AI-powered collaborative workspace and task management platform. Click the button below to accept the invitation and join the team.
+          <strong>${inviterName}</strong> has invited you to collaborate on <strong>${projectName}</strong> inside TaskPulse.
+        </p>
+        <p style="color: #4a4a4a; font-size: 16px; line-height: 1.5;">
+          TaskPulse is an AI-powered collaborative project management platform. Click the button below to accept your invitation.
         </p>
         <div style="text-align: center; margin: 30px 0;">
           <a href="${inviteUrl}" style="background-color: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
-            Join Workspace
+            Accept Invitation
           </a>
         </div>
+        <p style="color: #4a4a4a; font-size: 16px; line-height: 1.5;">
+          If you already have a TaskPulse account, you can immediately access the project. If you don't, you will be guided through registration first.
+        </p>
         <p style="color: #888; font-size: 14px; margin-top: 30px;">
-          If the button doesn't work, copy and paste this link into your browser:<br/>
-          <a href="${inviteUrl}" style="color: #6366f1;">${inviteUrl}</a>
+          If you weren't expecting this invitation, you can safely ignore this email.
+        </p>
+        <p style="color: #888; font-size: 14px; margin-top: 10px;">
+          Regards,<br/>
+          TaskPulse Team
         </p>
       </div>
     `;
@@ -42,7 +51,7 @@ const sendWorkspaceInviteEmail = async (email, inviteUrl, workspaceName, inviter
     const data = await resend.emails.send({
       from: 'TaskPulse <onboarding@resend.dev>', // Update with your verified Resend domain in production
       to: email,
-      subject: `You're invited to join ${workspaceName} on TaskPulse`,
+      subject: `You're invited to collaborate on TaskPulse`,
       html: html,
     });
 
@@ -56,5 +65,5 @@ const sendWorkspaceInviteEmail = async (email, inviteUrl, workspaceName, inviter
 };
 
 module.exports = {
-  sendWorkspaceInviteEmail
+  sendProjectInviteEmail
 };

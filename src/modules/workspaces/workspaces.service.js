@@ -44,20 +44,7 @@ const getWorkspaceById = async (workspaceId, userId) => {
   return workspace;
 };
 
-/**
- * Create a new workspace (creator becomes owner)
- */
-const createWorkspace = async (data, userId) => {
-  const workspace = await Workspace.create({
-    name: data.name,
-    timezone: data.timezone || 'UTC',
-    createdBy: userId,
-    members: [{ userId, role: 'owner' }],
-    settings: data.settings || {}
-  });
 
-  return workspace;
-};
 
 /**
  * Update workspace (owner/admin only)
@@ -136,7 +123,6 @@ const createInvite = async (workspaceId, userId, expiresInDays = 7) => {
 module.exports = {
   listWorkspaces,
   getWorkspaceById,
-  createWorkspace,
   updateWorkspace,
   createInvite
 };

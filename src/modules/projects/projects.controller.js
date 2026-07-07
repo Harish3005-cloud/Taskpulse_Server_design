@@ -26,6 +26,15 @@ const listProjects = async (req, res, next) => {
   }
 };
 
+const listSharedProjects = async (req, res, next) => {
+  try {
+    const projects = await projectService.listSharedProjects(req.user.id);
+    res.status(200).json({ success: true, projects });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const getProject = async (req, res, next) => {
   try {
     const { workspaceId } = req.query;
@@ -81,11 +90,38 @@ const getPresignedUrl = async (req, res, next) => {
   }
 };
 
+const inviteMember = async (req, res, next) => {
+  try {
+    const { workspaceId, email, role } = req.body;
+    if (!workspaceId || !email) throw new AppError('workspaceId and email are required', 400);
+
+    const invite = await projectService.inviteMember(req.params.id, workspaceId, req.user.id, email, role, req.user.name);
+    res.status(201).json({ success: true, invite });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const removeMember = async (req, res, next) => {
+  try {
+    const { workspaceId } = req.body;
+    if (!workspaceId) throw new AppError('workspaceId is required', 400);
+
+    const project = await projectService.removeMember(req.params.id, workspaceId, req.user.id, req.params.userId);
+    res.status(200).json({ success: true, project });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createProject,
   listProjects,
+  listSharedProjects,
   getProject,
   updateProject,
   archiveProject,
-  getPresignedUrl
+  getPresignedUrl,
+  inviteMember,
+  removeMember
 };

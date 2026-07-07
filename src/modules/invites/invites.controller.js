@@ -1,34 +1,34 @@
-const Invite = require('../workspaces/invites.model');
-const Workspace = require('../workspaces/workspaces.model');
+const Invitation = require('./invites.model');
+const Project = require('../projects/projects.model');
 const AppError = require('../../shared/utils/AppError');
 
-/**
- * GET /api/v1/invites/:token
- * Validate invite token (public)
- */
 const validateInvite = async (req, res, next) => {
   try {
     const { token } = req.params;
-    const invite = await Invite.findOne({ token }).populate('workspaceId', 'name');
-
+    
+    const invite = await Invitation.findOne({ token }).populate('projectId', 'name').populate('invitedBy', 'name email');
+    
     if (!invite) {
-      throw new AppError('Invite not found or invalid', 404);
+      throw new AppError('Invalid or expired invitation', 404);
     }
-
+    
+    if (invite.status !== 'pending') {
+      throw new AppError(`This invitation has already been ${invite.status}`, 400);
+    }
+    
     if (new Date() > invite.expiresAt) {
-      throw new AppError('Invite has expired', 400);
+      invite.status = 'expired';
+      await invite.save();
+      throw new AppError('This invitation has expired', 400);
     }
-
-    if (invite.claimedBy) {
-      throw new AppError('Invite has already been claimed', 400);
-    }
-
+    
     res.status(200).json({
       success: true,
       invite: {
-        id: invite._id,
-        workspaceName: invite.workspaceId ? invite.workspaceId.name : 'Unknown Workspace',
-        expiresAt: invite.expiresAt
+        email: invite.email,
+        role: invite.role,
+        project: invite.projectId,
+        invitedBy: invite.invitedBy
       }
     });
   } catch (error) {
@@ -36,53 +36,54 @@ const validateInvite = async (req, res, next) => {
   }
 };
 
-/**
- * POST /api/v1/invites/:token/claim
- * Claim an invite and join workspace (authenticated)
- */
 const claimInvite = async (req, res, next) => {
   try {
     const { token } = req.params;
     const userId = req.user.id;
-
-    const invite = await Invite.findOne({ token });
-
+    const userEmail = req.user.email;
+    
+    const invite = await Invitation.findOne({ token, status: 'pending' });
+    
     if (!invite) {
-      throw new AppError('Invite not found or invalid', 404);
+      throw new AppError('Invalid or expired invitation', 404);
     }
-
+    
     if (new Date() > invite.expiresAt) {
-      throw new AppError('Invite has expired', 400);
+      invite.status = 'expired';
+      await invite.save();
+      throw new AppError('This invitation has expired', 400);
     }
 
-    if (invite.claimedBy) {
-      throw new AppError('Invite has already been claimed', 400);
+    if (invite.email.toLowerCase() !== userEmail.toLowerCase()) {
+      throw new AppError('This invitation is for a different email address', 403);
     }
-
-    const workspace = await Workspace.findById(invite.workspaceId);
-    if (!workspace) {
-      throw new AppError('Workspace no longer exists', 404);
+    
+    const project = await Project.findById(invite.projectId);
+    if (!project) {
+      throw new AppError('The project this invitation belongs to no longer exists', 404);
     }
-
+    
     // Check if user is already a member
-    const isMember = workspace.members.some(member => member.userId.toString() === userId);
-    if (isMember) {
-      throw new AppError('User is already a member of this workspace', 400);
+    const isMember = project.members.some(m => m.user && m.user.toString() === userId.toString());
+    
+    if (!isMember) {
+      project.members.push({
+        user: userId,
+        role: invite.role,
+        joinedAt: new Date()
+      });
+      await project.save();
     }
-
-    // Add user to workspace members
-    workspace.members.push({ userId, role: 'member' });
-    await workspace.save();
-
-    // Mark invite as claimed
-    invite.claimedBy = userId;
-    invite.claimedAt = new Date();
+    
+    // Mark invite as accepted
+    invite.status = 'accepted';
+    invite.acceptedAt = new Date();
     await invite.save();
-
+    
     res.status(200).json({
       success: true,
-      message: 'Successfully joined workspace',
-      workspaceId: workspace._id
+      message: 'Invitation accepted successfully',
+      project
     });
   } catch (error) {
     next(error);

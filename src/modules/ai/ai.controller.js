@@ -1,4 +1,5 @@
 const AppError = require('../../shared/utils/AppError');
+const analyticsService = require('../analytics/analytics.service');
 
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
@@ -8,7 +9,7 @@ const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
  */
 const chatWithAI = async (req, res, next) => {
   try {
-    const { messages } = req.body;
+    const { messages, workspaceId } = req.body;
     const apiKey = process.env.OPENROUTER_API_KEY;
     const model = process.env.OPENROUTER_MODEL || 'openrouter/auto';
 
@@ -25,12 +26,43 @@ const chatWithAI = async (req, res, next) => {
       role: msg.role === 'ai' ? 'assistant' : msg.role,
       content: msg.content
     }));
+    
+    let contextString = "";
+    
+    // Fetch live workspace context if workspaceId is provided
+    if (workspaceId && req.user) {
+      try {
+        const [summary, projects, deadlines] = await Promise.all([
+          analyticsService.getWorkspaceSummary(workspaceId, req.user._id),
+          analyticsService.getProjectProgress(workspaceId, req.user._id),
+          analyticsService.getUpcomingDeadlines(workspaceId, req.user._id)
+        ]);
+        
+        contextString = `
+Current Workspace Status:
+- Total Projects: ${summary.totalProjects}
+- Tasks: ${summary.totalTasks} total, ${summary.completedTasks} completed, ${summary.overdueTasks} overdue.
+- Completion Rate: ${summary.completionRate}%
+
+Active Projects:
+${projects.map(p => `- ${p.projectName}: ${p.progress}% complete (${p.completedTasks}/${p.totalTasks} tasks)`).join('\n')}
+
+Upcoming Deadlines:
+${deadlines.slice(0, 5).map(d => `- ${d.title} (Project: ${d.project || 'None'}) due ${new Date(d.dueDate).toLocaleDateString()}`).join('\n')}
+
+If you notice high overdue tasks or projects with low progress, you can output a line starting with "RISK DETECTED:" followed by your analysis to trigger a special UI warning.`;
+
+      } catch (err) {
+        console.warn("Failed to fetch workspace context for AI:", err.message);
+      }
+    }
 
     // Inject a system prompt to give it context about TaskPulse
     const systemPrompt = {
       role: 'system',
       content: `You are TaskPulse AI, an intelligent assistant built into a task management SaaS. 
-Keep your answers concise, helpful, and focused on productivity, project management, and task analysis.`
+Keep your answers concise, helpful, and focused on productivity, project management, and task analysis.
+${contextString}`
     };
 
     const response = await fetch(OPENROUTER_API_URL, {

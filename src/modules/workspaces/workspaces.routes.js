@@ -4,7 +4,6 @@ const {
   listWorkspaces, 
   getWorkspace, 
   getWorkspaceMembers,
-  createWorkspace, 
   updateWorkspace,
   createInvite
 } = require('./workspaces.controller');
@@ -72,31 +71,7 @@ router.get('/:id', getWorkspace);
  */
 router.get('/:id/members', getWorkspaceMembers);
 
-/**
- * @swagger
- * /workspaces:
- *   post:
- *     summary: Create a new workspace
- *     tags: [Workspaces]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [name]
- *             properties:
- *               name:
- *                 type: string
- *               timezone:
- *                 type: string
- *     responses:
- *       201:
- *         description: Workspace created
- */
-router.post('/', createWorkspace);
+
 
 /**
  * @swagger

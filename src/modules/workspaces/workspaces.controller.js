@@ -69,31 +69,6 @@ const getWorkspaceMembers = async (req, res, next) => {
   }
 };
 
-/**
- * POST /api/v1/workspaces
- * Create a new workspace.
- */
-const createWorkspace = async (req, res, next) => {
-  try {
-    const { name, timezone, settings } = req.body;
-
-    if (!name) {
-      throw new AppError('Workspace name is required', 400);
-    }
-
-    const workspace = await workspaceService.createWorkspace(
-      { name, timezone, settings },
-      req.user.id
-    );
-
-    res.status(201).json({
-      success: true,
-      workspace
-    });
-  } catch (error) {
-    next(error);
-  }
-};
 
 /**
  * PATCH /api/v1/workspaces/:id
@@ -183,7 +158,6 @@ module.exports = {
   listWorkspaces,
   getWorkspace,
   getWorkspaceMembers,
-  createWorkspace,
   updateWorkspace,
   createInvite
 };
