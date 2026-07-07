@@ -9,18 +9,26 @@ const sendEmailJS = (templateParams) => {
     const serviceId = process.env.EMAILJS_SERVICE_ID;
     const templateId = process.env.EMAILJS_TEMPLATE_ID;
     const publicKey = process.env.EMAILJS_PUBLIC_KEY;
+    const privateKey = process.env.EMAILJS_PRIVATE_KEY;
 
     if (!serviceId || !templateId || !publicKey) {
       console.warn('EmailJS not configured (missing EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, or EMAILJS_PUBLIC_KEY). Skipping email.');
       return resolve(null);
     }
 
-    const payload = JSON.stringify({
+    const payloadObj = {
       service_id: serviceId,
       template_id: templateId,
       user_id: publicKey,
       template_params: templateParams
-    });
+    };
+
+    // If private key is provided, add it as accessToken to allow non-browser requests
+    if (privateKey) {
+      payloadObj.accessToken = privateKey;
+    }
+
+    const payload = JSON.stringify(payloadObj);
 
     const options = {
       hostname: 'api.emailjs.com',
