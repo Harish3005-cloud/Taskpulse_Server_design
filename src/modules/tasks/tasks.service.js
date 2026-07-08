@@ -28,10 +28,22 @@ const verifyWorkspaceMembership = async (workspaceId, userId) => {
   return workspace;
 };
 
-const verifyProjectAccess = async (projectId, workspaceId) => {
+const verifyProjectAccess = async (projectId, workspaceId, userId) => {
   if (!projectId) return null;
-  const project = await Project.findOne({ _id: projectId, workspaceId, archivedAt: null });
-  if (!project) throw new AppError('Project not found in this workspace', 404);
+  const workspace = await Workspace.findOne({
+    _id: workspaceId,
+    'members.userId': userId,
+    archivedAt: null
+  });
+  if (workspace) return true;
+
+  const project = await Project.findOne({ 
+    _id: projectId, 
+    workspaceId, 
+    'members.user': userId,
+    archivedAt: null 
+  });
+  if (!project) throw new AppError('Project not found or access denied', 404);
   return project;
 };
 
@@ -57,7 +69,11 @@ const exportTaskToS3 = async (task) => {
 };
 
 const listTasks = async (workspaceId, userId, query = {}) => {
-  await verifyWorkspaceMembership(workspaceId, userId);
+  if (query.projectId) {
+    await verifyProjectAccess(query.projectId, workspaceId, userId);
+  } else {
+    await verifyWorkspaceMembership(workspaceId, userId);
+  }
 
   const filter = { workspaceId, archivedAt: null };
 
@@ -121,8 +137,6 @@ const listTasks = async (workspaceId, userId, query = {}) => {
 };
 
 const getTask = async (taskId, workspaceId, userId) => {
-  await verifyWorkspaceMembership(workspaceId, userId);
-
   const task = await Task.findOne({ _id: taskId, workspaceId, archivedAt: null })
     .populate('assignedTo', 'name email avatar')
     .populate('createdBy', 'name email avatar')
@@ -133,14 +147,23 @@ const getTask = async (taskId, workspaceId, userId) => {
     throw new AppError('Task not found', 404);
   }
 
+  if (task.projectId) {
+    await verifyProjectAccess(task.projectId._id || task.projectId, workspaceId, userId);
+  } else {
+    await verifyWorkspaceMembership(workspaceId, userId);
+  }
+
   return task;
 };
 
 const aiService = require('./ai.service');
 
 const createTask = async (workspaceId, userId, data) => {
-  await verifyWorkspaceMembership(workspaceId, userId);
-  await verifyProjectAccess(data.projectId, workspaceId);
+  if (data.projectId) {
+    await verifyProjectAccess(data.projectId, workspaceId, userId);
+  } else {
+    await verifyWorkspaceMembership(workspaceId, userId);
+  }
 
   // Call OpenRouter AI to score the task
   const aiScore = await aiService.scoreTask(data.title, data.description);
@@ -191,16 +214,20 @@ const createTask = async (workspaceId, userId, data) => {
 };
 
 const updateTask = async (taskId, workspaceId, userId, data) => {
-  await verifyWorkspaceMembership(workspaceId, userId);
-
   const task = await Task.findOne({ _id: taskId, workspaceId, archivedAt: null });
 
   if (!task) {
     throw new AppError('Task not found', 404);
   }
 
+  if (task.projectId) {
+    await verifyProjectAccess(task.projectId, workspaceId, userId);
+  } else {
+    await verifyWorkspaceMembership(workspaceId, userId);
+  }
+
   if (data.projectId && String(data.projectId) !== String(task.projectId)) {
-    await verifyProjectAccess(data.projectId, workspaceId);
+    await verifyProjectAccess(data.projectId, workspaceId, userId);
   }
 
   // Capture old state for notification logic
@@ -266,12 +293,16 @@ const updateTask = async (taskId, workspaceId, userId, data) => {
 };
 
 const deleteTask = async (taskId, workspaceId, userId) => {
-  await verifyWorkspaceMembership(workspaceId, userId);
-
   const task = await Task.findOne({ _id: taskId, workspaceId, archivedAt: null });
 
   if (!task) {
     throw new AppError('Task not found', 404);
+  }
+
+  if (task.projectId) {
+    await verifyProjectAccess(task.projectId, workspaceId, userId);
+  } else {
+    await verifyWorkspaceMembership(workspaceId, userId);
   }
 
   task.archivedAt = new Date();
@@ -283,11 +314,15 @@ const deleteTask = async (taskId, workspaceId, userId) => {
 };
 
 const getPresignedUrl = async (taskId, workspaceId, userId, fileDetails) => {
-  await verifyWorkspaceMembership(workspaceId, userId);
-
   const task = await Task.findOne({ _id: taskId, workspaceId, archivedAt: null });
   if (!task) {
     throw new AppError('Task not found', 404);
+  }
+
+  if (task.projectId) {
+    await verifyProjectAccess(task.projectId, workspaceId, userId);
+  } else {
+    await verifyWorkspaceMembership(workspaceId, userId);
   }
 
   const bucketName = process.env.AWS_S3_BUCKET_NAME;
