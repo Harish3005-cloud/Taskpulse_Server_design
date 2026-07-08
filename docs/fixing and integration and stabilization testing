@@ -1,0 +1,46 @@
+# Stabilization and Integration Plan
+
+This document outlines the approach for the complete integration and stabilization pass for TaskPulse, addressing the 4 key issues identified in your request.
+
+## Issue 1: Project Progress Does Not Update
+
+**Problem:** Project progress is calculated dynamically by the backend, but the frontend (`ProjectDetails.jsx`) does not re-fetch the project data when a task is created, updated, or deleted. This results in the progress bar remaining static until a manual page refresh.
+
+**Proposed Solution:**
+- In `ProjectDetails.jsx`, we will trigger `fetchProjectDetails()` whenever a task is deleted, its status is changed, or it is edited.
+- This ensures that the dynamic calculation from the backend is instantly reflected in the UI's progress bar and metrics row.
+
+## Issue 2: Edit Task Does Not Work
+
+**Problem:** In `ProjectDetails.jsx`, clicking a task to edit simply logs `console.log('Edit task', id)` and does nothing. In `TaskDetailPanel.jsx`, the `Category` field is missing, and updates need to reliably reflect back to the list/board state.
+
+**Proposed Solution:**
+- Integrate `TaskDetailPanel` into `ProjectDetails.jsx` (similar to how it works in `TaskBoard.jsx`) so users can actually open the edit panel from the Project view.
+- Update `TaskDetailPanel.jsx` to include a `Labels` (Category) input field, mapping to the `userLabels` property.
+- Ensure the `onUpdateTask` callback properly updates the local `tasks` state and triggers `fetchProjectDetails()` (for progress updates) when necessary.
+
+## Issue 3: Fix Analytics Page
+
+**Problem:** The Analytics page currently fails to load. The backend queries use `req.user._id`, but the JWT authentication middleware populates `req.user.id` (a string). This mismatch causes all analytics queries to fail with an undefined user ID or fail the workspace access check.
+
+**Proposed Solution:**
+- Update `analytics.controller.js` to correctly use `req.user.id` instead of `req.user._id` for all 5 analytics endpoint handlers.
+- Verify that `DashboardAnalytics.jsx` correctly parses the trends and health data.
+
+## Issue 4: Integrate AWS S3 Attachments
+
+**Problem:** Attachments only work inside `TaskDetailPanel.jsx` (Edit Task). They are missing from Create Task, Create Project, and Edit Project modals.
+
+**Proposed Solution:**
+- Update `CreateTaskModal.jsx`: Add a file input field. After the task is created (in `handleSubmit`), sequentially upload any selected files using the `POST /tasks/:taskId/attachments` endpoint before closing the modal.
+- Update `CreateProjectModal.jsx`: Add a file input field. Similarly, after the project is created, upload any selected files using the `POST /projects/:projectId/attachments` endpoint.
+- Update `EditProjectModal.jsx`: Add an attachment section similar to `TaskDetailPanel` that allows uploading and viewing/downloading attachments directly.
+
+## User Review Required
+
+> [!WARNING]
+> Please review the plan above. Once approved, I will implement these changes and perform an end-to-end verification.
+
+## Open Questions
+
+None at this time.
