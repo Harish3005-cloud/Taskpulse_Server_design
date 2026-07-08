@@ -42,11 +42,16 @@ const claimInvite = async (req, res, next) => {
     const userId = req.user.id;
     const userEmail = req.user.email;
     
+    console.log(`[claimInvite] User ${userId} (${userEmail}) attempting to claim invite token: ${token.substring(0, 8)}...`);
+    
     const invite = await Invitation.findOne({ token, status: 'pending' });
     
     if (!invite) {
+      console.log(`[claimInvite] No pending invite found for token: ${token.substring(0, 8)}...`);
       throw new AppError('Invalid or expired invitation', 404);
     }
+    
+    console.log(`[claimInvite] Found invite for email: ${invite.email}, projectId: ${invite.projectId}`);
     
     if (new Date() > invite.expiresAt) {
       invite.status = 'expired';
@@ -55,6 +60,7 @@ const claimInvite = async (req, res, next) => {
     }
 
     if (invite.email.toLowerCase() !== userEmail.toLowerCase()) {
+      console.log(`[claimInvite] Email mismatch: invite=${invite.email}, user=${userEmail}`);
       throw new AppError('This invitation is for a different email address', 403);
     }
     
@@ -73,6 +79,9 @@ const claimInvite = async (req, res, next) => {
         joinedAt: new Date()
       });
       await project.save();
+      console.log(`[claimInvite] Added user ${userId} to project ${project.name} (${project._id})`);
+    } else {
+      console.log(`[claimInvite] User ${userId} is already a member of project ${project._id}`);
     }
     
     // Mark invite as accepted
@@ -80,12 +89,15 @@ const claimInvite = async (req, res, next) => {
     invite.acceptedAt = new Date();
     await invite.save();
     
+    console.log(`[claimInvite] Invite accepted successfully. Project workspaceId: ${project.workspaceId}`);
+    
     res.status(200).json({
       success: true,
       message: 'Invitation accepted successfully',
       project
     });
   } catch (error) {
+    console.error(`[claimInvite] Error:`, error.message);
     next(error);
   }
 };

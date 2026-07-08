@@ -245,15 +245,21 @@ const getPresignedUrl = async (projectId, workspaceId, userId, fileDetails) => {
 };
 
 const listSharedProjects = async (userId) => {
-  // Find the user's workspace so we can exclude it
-  const userWorkspace = await Workspace.findOne({ 'members.userId': userId });
-  const excludeWorkspaceId = userWorkspace ? userWorkspace._id : null;
+  // Find ALL workspaces where the user is a direct member, so we can exclude them
+  const userWorkspaces = await Workspace.find({ 'members.userId': userId }).select('_id').lean();
+  const excludeWorkspaceIds = userWorkspaces.map(ws => ws._id);
 
-  const projects = await Project.find({ 
+  const query = { 
     'members.user': userId,
     archivedAt: null,
-    ...(excludeWorkspaceId && { workspaceId: { $ne: excludeWorkspaceId } })
-  })
+  };
+  
+  // Exclude the user's own workspaces — only show projects from OTHER workspaces
+  if (excludeWorkspaceIds.length > 0) {
+    query.workspaceId = { $nin: excludeWorkspaceIds };
+  }
+
+  const projects = await Project.find(query)
     .populate('lead', 'name email avatar')
     .populate('members.user', 'name email avatar')
     .populate('workspaceId', 'name slug')
