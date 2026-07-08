@@ -71,13 +71,30 @@ const createProject = async (workspaceId, userId, data) => {
 };
 
 const listProjects = async (workspaceId, userId) => {
-  await verifyWorkspaceMembership(workspaceId, userId);
+  const workspace = await Workspace.findOne({
+    _id: workspaceId,
+    'members.userId': userId,
+    archivedAt: null
+  });
 
-  const projects = await Project.find({ workspaceId, archivedAt: null })
-    .populate('lead', 'name email avatar')
-    .populate('members', 'name email avatar')
-    .sort('-createdAt')
-    .lean();
+  let projects;
+  if (workspace) {
+    projects = await Project.find({ workspaceId, archivedAt: null })
+      .populate('lead', 'name email avatar')
+      .populate('members.user', 'name email avatar')
+      .sort('-createdAt')
+      .lean();
+  } else {
+    projects = await Project.find({ workspaceId, 'members.user': userId, archivedAt: null })
+      .populate('lead', 'name email avatar')
+      .populate('members.user', 'name email avatar')
+      .sort('-createdAt')
+      .lean();
+      
+    if (projects.length === 0) {
+      throw new AppError('Workspace not found or access denied', 404);
+    }
+  }
 
   const projectIds = projects.map(p => p._id);
   const stats = await Task.aggregate([
