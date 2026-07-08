@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Project = require('./projects.model');
 const Workspace = require('../workspaces/workspaces.model');
 const Task = require('../tasks/tasks.model');
@@ -98,7 +99,7 @@ const listProjects = async (workspaceId, userId) => {
 
   const projectIds = projects.map(p => p._id);
   const stats = await Task.aggregate([
-    { $match: { workspaceId, archivedAt: null, projectId: { $in: projectIds } } },
+    { $match: { workspaceId: new mongoose.Types.ObjectId(workspaceId), archivedAt: null, projectId: { $in: projectIds } } },
     { $group: {
         _id: '$projectId',
         totalTasks: { $sum: 1 },
@@ -145,7 +146,7 @@ const getProject = async (projectId, workspaceId, userId) => {
   }
 
   const stats = await Task.aggregate([
-    { $match: { workspaceId, archivedAt: null, projectId: project._id } },
+    { $match: { workspaceId: new mongoose.Types.ObjectId(workspaceId), archivedAt: null, projectId: project._id } },
     { $group: {
         _id: '$projectId',
         totalTasks: { $sum: 1 },
