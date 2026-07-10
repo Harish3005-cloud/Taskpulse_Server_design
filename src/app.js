@@ -11,7 +11,7 @@ const { logger, morganFormat } = require('./shared/utils/logger');
 const errorHandler = require('./shared/utils/errorHandler');
 const AppError = require('./shared/utils/AppError');
 
-// Route imports
+
 const authRoutes = require('./modules/auth/auth.routes');
 const workspaceRoutes = require('./modules/workspaces/workspaces.routes');
 const tasksRoutes = require('./modules/tasks/tasks.routes');
@@ -24,7 +24,7 @@ const notificationsRoutes = require('./modules/notifications/notifications.route
 
 const app = express();
 
-// ─── Middleware Pipeline ────────────────────────────────────────────
+//  middleware pipeline 
 app.use(helmet());
 app.use(cors({ 
   origin: process.env.CORS_ORIGIN || 'http://localhost:5173',

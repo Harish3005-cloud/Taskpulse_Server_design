@@ -1,5 +1,6 @@
 const projectService = require('./projects.service');
 const AppError = require('../../shared/utils/AppError');
+const mongoose = require('mongoose');
 
 const createProject = async (req, res, next) => {
   try {
@@ -19,7 +20,12 @@ const listProjects = async (req, res, next) => {
     const { workspaceId } = req.query;
     if (!workspaceId) throw new AppError('workspaceId query parameter is required', 400);
 
-    const projects = await projectService.listProjects(workspaceId, req.user.id);
+    if (!mongoose.Types.ObjectId.isValid(workspaceId)) {
+      throw new AppError('Invalid workspaceId', 400);
+    }
+    const safeWorkspaceId = new mongoose.Types.ObjectId(workspaceId).toString();
+
+    const projects = await projectService.listProjects(safeWorkspaceId, req.user.id);
     res.status(200).json({ success: true, projects });
   } catch (error) {
     next(error);
@@ -40,7 +46,12 @@ const getProject = async (req, res, next) => {
     const { workspaceId } = req.query;
     if (!workspaceId) throw new AppError('workspaceId query parameter is required', 400);
 
-    const project = await projectService.getProject(req.params.id, workspaceId, req.user.id);
+    if (!mongoose.Types.ObjectId.isValid(workspaceId)) {
+      throw new AppError('Invalid workspaceId', 400);
+    }
+    const safeWorkspaceId = new mongoose.Types.ObjectId(workspaceId).toString();
+
+    const project = await projectService.getProject(req.params.id, safeWorkspaceId, req.user.id);
     res.status(200).json({ success: true, project });
   } catch (error) {
     next(error);
