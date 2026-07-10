@@ -85,21 +85,3 @@ Services --> Stripe
 Socket --> Redis
 Cron --> Services
 ```
-
-
----
-
-## I would make **one more improvement**.
-
-Instead of just a README, I'd create a `docs/` folder to make the repository feel like a professional open-source project:
-
-```text
-docs/
-├── system_design.md
-├── api_reference.md
-├── database_schema.md
-├── authentication.md
-├── analytics.md
-├── deployment.md
-├── invitation_flow.md
-└── ai_architecture.md
