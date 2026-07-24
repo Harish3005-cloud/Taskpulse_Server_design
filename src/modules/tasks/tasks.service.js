@@ -6,6 +6,7 @@ const Project = require('../projects/projects.model');
 const AppError = require('../../shared/utils/AppError');
 const crypto = require('crypto');
 const notificationService = require('../notifications/notifications.service');
+const { getWorkspaceS3Folder } = require('../../shared/utils/s3');
 
 const s3Client = new S3Client({
   region: process.env.AWS_REGION || 'eu-north-1',
@@ -53,7 +54,8 @@ const exportTaskToS3 = async (task) => {
     const bucketName = process.env.AWS_S3_BUCKET_NAME;
     if (!bucketName) return; // Skip if S3 not configured
 
-    const objectKey = `workspaces/${task.workspaceId}/projects/${task.projectId || 'unassigned'}/tasks/${task._id}/record.json`;
+    const workspaceFolder = await getWorkspaceS3Folder(task.workspaceId);
+    const objectKey = `workspaces/${workspaceFolder}/projects/${task.projectId || 'unassigned'}/tasks/${task._id}/record.json`;
     
     const command = new PutObjectCommand({
       Bucket: bucketName,
@@ -332,7 +334,8 @@ const getPresignedUrl = async (taskId, workspaceId, userId, fileDetails) => {
 
   const fileExtension = fileDetails.fileName.split('.').pop();
   const randomString = crypto.randomBytes(8).toString('hex');
-  const objectKey = `workspaces/${workspaceId}/projects/${task.projectId || 'unassigned'}/tasks/${taskId}/attachments/${randomString}.${fileExtension}`;
+  const workspaceFolder = await getWorkspaceS3Folder(workspaceId);
+  const objectKey = `workspaces/${workspaceFolder}/projects/${task.projectId || 'unassigned'}/tasks/${taskId}/attachments/${randomString}.${fileExtension}`;
 
   const command = new PutObjectCommand({
     Bucket: bucketName,

@@ -4,6 +4,7 @@ const Workspace = require('../workspaces/workspaces.model');
 const Task = require('../tasks/tasks.model');
 const AppError = require('../../shared/utils/AppError');
 const Invitation = require('../invites/invites.model');
+const { getWorkspaceS3Folder } = require('../../shared/utils/s3');
 const crypto = require('crypto');
 const { sendProjectInviteEmail } = require('../../shared/services/email.service');
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
@@ -221,7 +222,8 @@ const getPresignedUrl = async (projectId, workspaceId, userId, fileDetails) => {
 
   const fileExtension = fileDetails.fileName.split('.').pop();
   const randomString = crypto.randomBytes(8).toString('hex');
-  const objectKey = `workspaces/${workspaceId}/projects/${projectId}/attachments/${randomString}.${fileExtension}`;
+  const workspaceFolder = await getWorkspaceS3Folder(workspaceId);
+  const objectKey = `workspaces/${workspaceFolder}/projects/${projectId}/attachments/${randomString}.${fileExtension}`;
 
   const command = new PutObjectCommand({
     Bucket: bucketName,
