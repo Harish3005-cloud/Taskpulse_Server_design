@@ -1,0 +1,31 @@
+services:
+  # The Node.js Web API
+  - type: web
+    name: taskpulse-api
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: taskpulse-redis
+          property: connectionString
+      # MONGODB_URI needs to be provided manually in the Render dashboard since it contains sensitive credentials
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+
+  # The Redis Instance
+  - type: redis
+    name: taskpulse-redis
+    plan: free
+    ipAllowList: [] # This ensures Redis is only accessible internally by other Render services
