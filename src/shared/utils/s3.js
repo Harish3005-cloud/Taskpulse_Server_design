@@ -1,4 +1,5 @@
 const Workspace = require('../../modules/workspaces/workspaces.model');
+const mongoose = require('mongoose');
 const AppError = require('./AppError');
 
 /**
@@ -7,7 +8,12 @@ const AppError = require('./AppError');
  * @returns {Promise<string>} The safe folder name.
  */
 const getWorkspaceS3Folder = async (workspaceId) => {
-  const workspace = await Workspace.findById(workspaceId).select('name');
+  if (!mongoose.Types.ObjectId.isValid(workspaceId)) {
+    throw new AppError('Invalid workspaceId', 400);
+  }
+
+  const safeWorkspaceId = new mongoose.Types.ObjectId(workspaceId).toString();
+  const workspace = await Workspace.findById(safeWorkspaceId).select('name');
   if (!workspace) {
     throw new AppError('Workspace not found', 404);
   }
@@ -21,7 +27,7 @@ const getWorkspaceS3Folder = async (workspaceId) => {
     safeName = 'workspace';
   }
     
-  return `${safeName}_${workspaceId}`;
+  return `${safeName}_${safeWorkspaceId}`;
 };
 
 module.exports = {
